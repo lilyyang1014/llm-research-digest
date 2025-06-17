@@ -14,7 +14,7 @@ TARGET_DATE_START = "20250411000000"
 TARGET_DATE_END = "20250411235959" 
 
 # 1. define the fixed project path
-FIXED_PROJECT_PATH = '****' # PLEASE USE YOUR OWN PATH!!!!!!
+FIXED_PROJECT_PATH = '****$$$' # PLEASE USE YOUR OWN PATH!!!!!!
 
 # 2. extract the date part from TARGET_DATE_START
 date_part = TARGET_DATE_START[:8] # result is "20240411"
