@@ -1,0 +1,8 @@
+# Ignore the output directory and its contents
+/Output/
+
+# Optional: ignore specific files or patterns if needed, e.g.,
+# *.log
+# __pycache__/
+# *.pyc
+# .DS_Store # (for macOS)
