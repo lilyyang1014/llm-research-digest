@@ -50,7 +50,7 @@ TARGET_INSTITUTIONS = [ "Stanford", "Stanford University",
 
 Clone this repository: 
 ```bash
-git clone https://github.com/lilyyang1014/arxiv_digest.git
+git clone https://github.com/lilyyang1014/llm-research-digest.git
 ```
 
 Install dependencies: 
