@@ -6,13 +6,12 @@ import re
 import shutil
 from google import genai
 import sys 
-
-# NEW: Import the Config class
 from config import Config
+from arxiv_client import ArxivClient
 
 # --- The functions below are now modified to accept the 'config' object or other necessary parameters ---
 
-def search_and_filter_arxiv(keywords_lower, start_date, end_date, max_results=None):
+""" def search_and_filter_arxiv(keywords_lower, start_date, end_date, max_results=None):
     print("\n--- Step 1: arXiv search and keyword filtering ---")
     query_string = f"cat:cs.* AND lastUpdatedDate:[{start_date} TO {end_date}]"
     print(f"Query string: {query_string}")
@@ -45,7 +44,7 @@ def search_and_filter_arxiv(keywords_lower, start_date, end_date, max_results=No
         return filtered_papers
     except Exception as e:
         print(f"Error: An error occurred during arXiv query on filtering: {e}")
-        return []
+        return [] """
 
 def download_filtered_papers(papers_to_download, download_dir, min_pdf_size_kb):
     print(f"\n--- Step 2: Downloading filtered papers PDFs (with validation) ---")
@@ -364,7 +363,6 @@ if __name__ == "__main__":
     # Or, if you want it to default to the script's current working directory, use: config = Config()
     config = Config(fixed_project_path='/Users/yaofu/Desktop/NEU/Project/LLM_Research_daily_digest/Output')
 
-
     # --- Initialize LLM Client ---
     llm_client = None
     if not config.GOOGLE_API_KEY or config.GOOGLE_API_KEY == "****":
@@ -379,9 +377,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # --- Step 1: arXiv Search and Keyword Filtering ---
-    filtered_arxiv_papers = search_and_filter_arxiv(
-        config.KEYWORDS_LOWER, config.TARGET_DATE_START, config.TARGET_DATE_END
-    )
+    # Create an instance of our new client
+    client = ArxivClient(config)
+    # Call the method to get the papers
+    filtered_arxiv_papers = client.search_and_filter_papers()
 
     # --- Step2: Download Filtered Paper PDFs ---
     downloaded_count = 0
