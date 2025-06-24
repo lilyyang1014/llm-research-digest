@@ -1,5 +1,6 @@
 # Ignore the output directory and its contents
 /Output/
+.DS_Store
 
 # Optional: ignore specific files or patterns if needed, e.g.,
 # *.log
