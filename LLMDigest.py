@@ -7,49 +7,10 @@ import shutil
 from google import genai
 import sys 
 
-KEYWORDS = ['llm', 'large language model', 'language model', 'foundation model','pretrained language model', 
-            'transformer', 'generative ai']
-KEYWORDS_LOWER = [k.lower() for k in KEYWORDS]
-TARGET_DATE_START = "20250411000000" 
-TARGET_DATE_END = "20250411235959" 
+# NEW: Import the Config class
+from config import Config
 
-# 1. define the fixed project path
-FIXED_PROJECT_PATH = '****$$$' # PLEASE USE YOUR OWN PATH!!!!!!
-
-# 2. extract the date part from TARGET_DATE_START
-date_part = TARGET_DATE_START[:8] # result is "20240411"
-
-# 3. format the date part to "MMDDYYYY"
-year = date_part[:4]    # "2025"
-month = date_part[4:6]  # "04"
-day = date_part[6:8]    # "11"
-formatted_date_folder_name = f"{month}{day}{year}" # result is "04112025"
-
-# 4. make a new BASE_DOWNLOAD_DIR using the formatted date
-BASE_DOWNLOAD_DIR = os.path.join(FIXED_PROJECT_PATH, formatted_date_folder_name)
-
-# 5. make a new FINAL_FILTERED_DIR using the formatted date
-FINAL_SUBDIR_NAME = 'Final_Selected_Papers'
-FINAL_FILTERED_DIR = os.path.join(BASE_DOWNLOAD_DIR, FINAL_SUBDIR_NAME)
-
-TARGET_INSTITUTIONS = [
-    "Stanford", "Stanford University", "Princeton University", "UC Berkeley", "University of California, Berkeley", 
-    "Berkeley", "CMU", "Carnegie Mellon University", "Carnegie Mellon", "NVIDIA Research", "NVIDIA",
-    "Google Deepmind", "Deepmind", "Google",  "OpenAI", "University of Washington", "Cornell University", 
-    "University of Illinois Urbana-Champaign", "UIUC", "Allen Institute for AI", "AI2"
-]
-TARGET_INSTITUTIONS_LOWER = [inst.lower() for inst in TARGET_INSTITUTIONS]
-TARGET_DOMAINS = [
-    'stanford.edu', 'berkeley.edu', 'cs.cmu.edu', 'mit.edu', 'csail.mit.edu', 'uw.edu', 'cs.washington.edu', 'cornell.edu',
-    'google.com', 'openai.com', 'cs.princeton.edu', 'illinois.edu', 'uiuc.edu', 'gatech.edu','nvidia.com', 'allenai.org'
-]
-EMAIL_REGEX = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
-HEADER_RATIO = 0.40
-
-# LLM API Key
-GOOGLE_API_KEY = "****" # PLEASE USE YOUR OWN KEY!!!!!!
-MODEL_NAME = "gemini-2.0-flash"
-CONSOLIDATED_MD_FILENAME = "consolidated_papers_summary3.md"
+# --- The functions below are now modified to accept the 'config' object or other necessary parameters ---
 
 def search_and_filter_arxiv(keywords_lower, start_date, end_date, max_results=None):
     print("\n--- Step 1: arXiv search and keyword filtering ---")
@@ -86,20 +47,18 @@ def search_and_filter_arxiv(keywords_lower, start_date, end_date, max_results=No
         print(f"Error: An error occurred during arXiv query on filtering: {e}")
         return []
 
-def download_filtered_papers(papers_to_download, download_dir):
+def download_filtered_papers(papers_to_download, download_dir, min_pdf_size_kb):
     print(f"\n--- Step 2: Downloading filtered papers PDFs (with validation) ---")
     print(f"Target download directory: {download_dir}")
 
-    # make sure the download directory exists
     try:
         os.makedirs(download_dir, exist_ok=True)
     except OSError as e:
         print(f"Error: Failed to create download directory '{download_dir}': {e}")
-        return (0, len(papers_to_download)) # cannot create directory, return 0 success
+        return (0, len(papers_to_download))
 
     download_count = 0
     total_to_download = len(papers_to_download)
-    min_pdf_size_kb = 10 # define minimum PDF size in KB
 
     if total_to_download == 0:
         print("No papers to download.")
@@ -113,7 +72,6 @@ def download_filtered_papers(papers_to_download, download_dir):
         short_id = "N/A" 
         try:
             short_id = paper.get_short_id()
-            ## Clean the short_id for filename
             clean_id = short_id.replace('/', '_').replace(':', '_')
             filename = f"{clean_id}.pdf"
             filepath = os.path.join(download_dir, filename)
@@ -121,24 +79,20 @@ def download_filtered_papers(papers_to_download, download_dir):
             print(f"[{i+1}/{total_to_download}] Attempting to download: {short_id} - {paper.title[:60]}...")
 
             if os.path.exists(filepath):
-                # if the file already exists, check its size
                 try:
                     file_size = os.path.getsize(filepath)
                     if file_size >= min_pdf_size_kb * 1024:
                         print(f"  File alreayd exists and size isreasonable ({file_size / 1024:.1f} KB), skipping download: {filename}")
-                        download_successful = True # mark as successful
+                        download_successful = True
                     else:
                         print(f"  File already exists but size is abnormal ({file_size / 1024:.1f} KB), attempting to redownload...")
                 except OSError as size_error:
                     print(f"  Unable to get size of existing file, attempting to redownload... Error: {size_error}")
 
-            # execute download only if the file does not exist or its size is abnormal
-            if not download_successful: # only download if not already successful
+            if not download_successful:
                 try:
-                    # Call the download_pdf method, specifying the save directory and filename
                     paper.download_pdf(dirpath=download_dir, filename=filename)
 
-                    # Check if the file was downloaded successfully
                     if os.path.exists(filepath):
                         file_size = os.path.getsize(filepath)
                         if file_size >= min_pdf_size_kb * 1024:
@@ -147,7 +101,7 @@ def download_filtered_papers(papers_to_download, download_dir):
                         else:
                             print(f"[Warning]Download complete but file size is abnormal ({file_size / 1024:.1f} KB), download might be incomplete: {filename}")
                             try:
-                                os.remove(filepath) # try to remove the abnormal file
+                                os.remove(filepath)
                                 print(f"Deleted file with abnormal size: {filename}")
                             except OSError as remove_error:
                                 print(f"Error deleting file with abnormal size: {remove_error}")
@@ -156,7 +110,6 @@ def download_filtered_papers(papers_to_download, download_dir):
 
                 except Exception as download_error:
                     print(f"An error occurred during download: {short_id} - Error: {download_error}")
-                    # if the download fails, check if a file was created
                     if filepath and os.path.exists(filepath):
                          try:
                              file_size = os.path.getsize(filepath)
@@ -167,7 +120,6 @@ def download_filtered_papers(papers_to_download, download_dir):
                          except OSError as check_error:
                              print(f"Error checking or deleting leftover file from download error: {check_error}")
 
-            # Check if the download was successful
             if download_successful:
                 download_count += 1
 
@@ -175,7 +127,6 @@ def download_filtered_papers(papers_to_download, download_dir):
             time.sleep(3.5)
 
         except Exception as paper_error:
-             # capture errors when processing the paper object
              print(f"Error processing paper metadata (ID: {short_id}, possible reason: {paper_error}), skipping download for this paper.")
 
     print("\n--- Download summary ---")
@@ -186,7 +137,7 @@ def download_filtered_papers(papers_to_download, download_dir):
     print("----------------")
     return download_count, total_to_download
 
-def filter_pdfs_by_affiliation(papers_to_check, pdf_source_dir, output_dir, target_institutions_lower, target_domains, header_ratio):
+def filter_pdfs_by_affiliation(papers_to_check, pdf_source_dir, output_dir, target_institutions_lower, target_domains, header_ratio, email_regex):
     
     print(f"\n--- Step 3: Filtering based on PDF content(Institution/Email) ---")
     print(f"Checking PDFs in source directory '{pdf_source_dir}', passing matching file information, and copying files to '{output_dir}'") 
@@ -238,7 +189,7 @@ def filter_pdfs_by_affiliation(papers_to_check, pdf_source_dir, output_dir, targ
                     header_limit_y = page_height * header_ratio
 
                     full_page_text = page.get_text()
-                    emails = re.findall(EMAIL_REGEX, full_page_text)
+                    emails = re.findall(email_regex, full_page_text)
                     if emails:
                         for email in emails:
                             try:
@@ -301,7 +252,6 @@ def filter_pdfs_by_affiliation(papers_to_check, pdf_source_dir, output_dir, targ
     print("\n--- PDF Content Filtering Summary ---")
     print(f"Total corresponding paper PDF files checked {processed_count}.")
     print(f"Number of papers selected based on content {len(final_selected_papers_with_reason)}")
-    ## print(f"Number of errors/warnings encountered during filtering: {potential_errors}")
     print("-----------------------------")
     return final_selected_papers_with_reason
 
@@ -316,7 +266,7 @@ def extract_text_from_pdf(pdf_path, max_pages=3):
         text = "".join(doc.load_page(i).get_text("text") for i in range(num_pages_to_read))
         doc.close()
         cleaned_text = "\n".join([line for line in text.splitlines() if line.strip()])
-        return cleaned_text[:4000] # 保留用户限制
+        return cleaned_text[:4000]
     except Exception as e:
         print(f"[Warning] Failed to extract text from {os.path.basename(pdf_path)}: {e}")
         return None
@@ -367,7 +317,7 @@ def process_paper_with_gemini(llm_client, model_name, paper_text, target_institu
         print(f"[Warning] Gemini API call failed: {e}")
         return False, None
 
-def generate_consolidated_markdown(summary_data, output_filepath, target_institutions_list):
+def generate_consolidated_markdown(summary_data, output_filepath, target_institutions_list, formatted_date_folder_name):
     
     print(f"\n--- Step 5: Generating Markdown Summary Report ---")
     if not summary_data:
@@ -381,8 +331,7 @@ def generate_consolidated_markdown(summary_data, output_filepath, target_institu
         with open(output_filepath, "w", encoding="utf-8") as f:
             f.write(f"# {markdown_title}\n\n")
             f.write(f"Target Institutions for Filtering: Stanford University, Princeton University, UC Berkeley, CMU, University of Washington, Cornell University, UIUC, Google Deepmind, OpenAI, NVIDIA, AI2")
-            # f.write(f"PDFs Processed from:** `{os.path.dirname(output_filepath)}`\n\n")
-            f.write("---\n\n")
+            f.write("\n---\n\n")
 
             for index, (paper, reason, summary) in enumerate(summary_data):
                 try:
@@ -393,7 +342,7 @@ def generate_consolidated_markdown(summary_data, output_filepath, target_institu
                     f.write(f"{index + 1}. {title}\n\n")
                     f.write(f"Authors: {authors}\n\n")
                     f.write(f"Affiliation Evidence: {affiliation_evidence}\n\n")
-                    f.write(f"Summary (Gemini-2-flash Generated):\n{summary}\n\n")
+                    f.write(f"Summary (Gemini-2.0-flash Generated):\n{summary}\n\n")
                     f.write("---\n\n")
                 except Exception as paper_data_error:
                     paper_id_str = f"ID: {paper.entry_id}" if paper else "Unknown Paper"
@@ -409,13 +358,21 @@ def generate_consolidated_markdown(summary_data, output_filepath, target_institu
 if __name__ == "__main__":
     print("=== Starting paper filtering and summarization process ===")
 
+    # --- Step 0: Instantiate Config class ---
+    # IMPORTANT: Replace '****$$$' with your actual project path.
+    # For example: config = Config(fixed_project_path='/Users/yaofu/dev/LLM_Research_daily_digest')
+    # Or, if you want it to default to the script's current working directory, use: config = Config()
+    config = Config(fixed_project_path='/Users/yaofu/Desktop/NEU/Project/LLM_Research_daily_digest/Output')
+
+
     # --- Initialize LLM Client ---
     llm_client = None
-    if not GOOGLE_API_KEY:
-        print("Error: Please set LLM Key")
+    if not config.GOOGLE_API_KEY or config.GOOGLE_API_KEY == "****":
+        print("Error: LLM API Key is not set. Please set the GOOGLE_API_KEY environment variable or edit config.py.")
         sys.exit(1)
     try:
-        llm_client = genai.Client(api_key=GOOGLE_API_KEY)
+        # This block is preserved exactly as in your original code.
+        llm_client = genai.Client(api_key=config.GOOGLE_API_KEY)
         print(f"LLM Client (genai.Client)initialized successfully.")
     except Exception as e:
         print(f"Fatal error: Failed to initialize Gemini Client: {e}")
@@ -423,29 +380,30 @@ if __name__ == "__main__":
 
     # --- Step 1: arXiv Search and Keyword Filtering ---
     filtered_arxiv_papers = search_and_filter_arxiv(
-        KEYWORDS_LOWER, TARGET_DATE_START, TARGET_DATE_END
+        config.KEYWORDS_LOWER, config.TARGET_DATE_START, config.TARGET_DATE_END
     )
 
     # --- Step2: Download Filtered Paper PDFs ---
     downloaded_count = 0
     if filtered_arxiv_papers:
-        downloaded_count, _ = download_filtered_papers(filtered_arxiv_papers, BASE_DOWNLOAD_DIR)
+        downloaded_count, _ = download_filtered_papers(filtered_arxiv_papers, config.BASE_DOWNLOAD_DIR, config.MIN_PDF_SIZE_KB)
     else:
         print("\nNo papers found in Step 1, skipping download.")
 
     # --- Step 3: Secondary Filtering Based on PDF Content (Institution/Email) ---
     final_papers_with_reason = []
-    if filtered_arxiv_papers and os.path.isdir(BASE_DOWNLOAD_DIR):
+    if filtered_arxiv_papers and os.path.isdir(config.BASE_DOWNLOAD_DIR):
          final_papers_with_reason = filter_pdfs_by_affiliation(
             filtered_arxiv_papers,
-            BASE_DOWNLOAD_DIR,      
-            FINAL_FILTERED_DIR,      
-            TARGET_INSTITUTIONS_LOWER,
-            TARGET_DOMAINS,
-            HEADER_RATIO
+            config.BASE_DOWNLOAD_DIR,      
+            config.FINAL_FILTERED_DIR,      
+            config.TARGET_INSTITUTIONS_LOWER,
+            config.TARGET_DOMAINS,
+            config.HEADER_RATIO,
+            config.EMAIL_REGEX
         )
     else:
-        print(f"\nStep 1 found no papers or source PDF directory '{BASE_DOWNLOAD_DIR}' does not exist, skipping secondary filtering.") 
+        print(f"\nStep 1 found no papers or source PDF directory '{config.BASE_DOWNLOAD_DIR}' does not exist, skipping secondary filtering.") 
 
     # --- Step 4: Use LLM to Extract Summaries and Re-confirm Institution ---
     matched_papers_summaries = []
@@ -453,14 +411,14 @@ if __name__ == "__main__":
     llm_matches_found = 0
     if final_papers_with_reason:
         print(f"\n--- Steo 4: Processing {len(final_papers_with_reason)} selected papers with LLM ---")
-        print(f"Reading files from directory'{FINAL_FILTERED_DIR}'")
+        print(f"Reading files from directory'{config.FINAL_FILTERED_DIR}'")
 
         for i, (paper, reason) in enumerate(final_papers_with_reason):
             try:
                 short_id = paper.get_short_id()
                 clean_id = short_id.replace('/', '_').replace(':', '_')
                 filename = f"{clean_id}.pdf"
-                pdf_path = os.path.join(FINAL_FILTERED_DIR, filename)
+                pdf_path = os.path.join(config.FINAL_FILTERED_DIR, filename)
 
                 print(f"[{i+1}/{len(final_papers_with_reason)}] LLM Processing: {filename} ...") 
                 llm_processed_count += 1
@@ -474,14 +432,13 @@ if __name__ == "__main__":
                     print("Could not extract text, skipping LLM processing.") 
                     continue
 
-                # --- Note: Using global variable MODEL_Name for model name ---
-                llm_model_name_for_call = f"models/{MODEL_NAME}"
+                llm_model_name_for_call = f"models/{config.MODEL_NAME}"
                 print(f"Call LLM (Model: {llm_model_name_for_call})...") 
                 is_match, summary = process_paper_with_gemini( 
                     llm_client,
                     llm_model_name_for_call,
                     extracted_text,
-                    TARGET_INSTITUTIONS
+                    config.TARGET_INSTITUTIONS
                 )
 
                 if is_match:
@@ -512,7 +469,7 @@ if __name__ == "__main__":
         print("\nStep 3 selected no files or the target directory does not exist, skipping LLM processing.") 
 
     # --- Step 5: Generate Markdown Summary Report ---
-    markdown_output_path = os.path.join(FINAL_FILTERED_DIR, CONSOLIDATED_MD_FILENAME)
-    generate_consolidated_markdown(matched_papers_summaries, markdown_output_path, TARGET_INSTITUTIONS)
+    markdown_output_path = config.MARKDOWN_OUTPUT_PATH
+    generate_consolidated_markdown(matched_papers_summaries, markdown_output_path, config.TARGET_INSTITUTIONS, config.FORMATTED_DATE_FOLDER_NAME)
 
     print("\n=== Process finished ===")
