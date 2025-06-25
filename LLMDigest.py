@@ -10,7 +10,52 @@ from config import Config
 from arxiv_client import ArxivClient
 from pdf_downloader import PdfDownloader
 from PdfProcessor import PdfProcessor
-from llm_summarizer import LLMSummarizer
+
+def process_paper_with_gemini(llm_client, model_name, paper_text, target_institutions_list):
+    institutions_str = ", ".join([f'"{inst}"' for inst in target_institutions_list])
+    prompt = f"""
+    Analyze the following paper text:
+    --- Paper Text ---
+    {paper_text}
+    --- End Paper Text ---
+
+    Please complete the following tasks:
+    1.  **Affiliation Check:** Does the text mention affiliations explicitly matching any of these institutions or their common variations: {institutions_str}? Respond ONLY with "MATCH" or "NO_MATCH".
+    2.  **Summary:** If Task 1 is "MATCH", please provide a concise (3-5 sentences) summary in English of the paper's core idea and main contributions. If Task 1 is "NO_MATCH", omit this part.
+
+    Output Format Requirements:
+    - Strictly start with "MATCH" or "NO_MATCH".
+    - If "MATCH", add a newline, then the summary content.
+
+    Example:
+    MATCH
+    This paper introduces a novel method for improving efficiency in large language models by utilizing sparse attention mechanisms, demonstrating significant speedups on benchmark tasks.
+
+    or
+
+    NO_MATCH
+    """
+    try:
+        response = llm_client.models.generate_content(
+            model=model_name,
+            contents=prompt
+        )
+        response_text = response.text.strip()
+        parts = response_text.split('\n', 1)
+        decision = parts[0].strip().upper()
+
+        if decision == "MATCH":
+            summary = parts[1].strip() if len(parts) > 1 and parts[1].strip() else "[LLM Summary generation failed or was empty]"
+            return True, summary
+        elif decision == "NO_MATCH":
+            return False, None
+        else:
+            print(f"  -> [Warning] Unrecognized API response: {response_text[:50]}...")
+            return False, None
+
+    except Exception as e:
+        print(f"[Warning] Gemini API call failed: {e}")
+        return False, None
 
 def generate_consolidated_markdown(summary_data, output_filepath, target_institutions_list, formatted_date_folder_name):
     
@@ -59,11 +104,78 @@ if __name__ == "__main__":
     # Or, if you want it to default to the script's current working directory, use: config = Config()
     config = Config(fixed_project_path='/Users/yaofu/Desktop/NEU/Project/LLM_Research_daily_digest/Output')
 
+    # --- Initialize LLM Client ---
+    llm_client = None
+    if not config.GOOGLE_API_KEY or config.GOOGLE_API_KEY == "****":
+        print("Error: LLM API Key is not set. Please set the GOOGLE_API_KEY environment variable or edit config.py.")
+        sys.exit(1)
+    try:
+        # This block is preserved exactly as in your original code.
+        llm_client = genai.Client(api_key=config.GOOGLE_API_KEY)
+        print(f"LLM Client (genai.Client)initialized successfully.")
+    except Exception as e:
+        print(f"Fatal error: Failed to initialize Gemini Client: {e}")
+        sys.exit(1)
+
     # --- Step 1: arXiv Search and Keyword Filtering ---
-    # Create an instance of our new client
+    """ # Create an instance of our new client
     client = ArxivClient(config)
     # Call the method to get the papers
-    filtered_arxiv_papers = client.search_and_filter_papers()
+    filtered_arxiv_papers = client.search_and_filter_papers() """
+
+    # --- Step 1: arXiv Search and Keyword Filtering (MOCKED) ---
+    print("\n--- Step 1: SKIPPED (due to arXiv API instability, using mock data) ---")
+
+    # This is a temporary measure for debugging and completing the refactoring.
+    # We will manually create a dummy list to proceed with testing subsequent steps.
+
+    class DummyAuthor:
+        """A mock author class to simulate arxiv.Author."""
+        def __init__(self, name):
+            self.name = name
+
+    class DummyPaper:
+        """A mock paper class to simulate arxiv.Result."""
+        def __init__(self, entry_id, title, summary, authors):
+            self.entry_id = entry_id
+            self.title = title
+            self.summary = summary
+            self.authors = [DummyAuthor(name) for name in authors]
+    
+        def get_short_id(self):
+        # Simulate the get_short_id() method
+            return self.entry_id.split('/')[-1]
+        
+        def download_pdf(self, dirpath, filename):
+            # Simulate the download_pdf() method by creating a dummy file.
+            # This allows subsequent steps (like PDF processing) to run without errors.
+            dummy_pdf_path = os.path.join(dirpath, filename)
+            # Ensure the directory exists before creating the file.
+            os.makedirs(os.path.dirname(dummy_pdf_path), exist_ok=True)
+            if not os.path.exists(dummy_pdf_path):
+                with open(dummy_pdf_path, 'w') as f:
+                    f.write("This is a dummy PDF created for testing purposes.")
+            print(f"  -> (Mock Download) Created dummy file for testing: {filename}")
+
+    # Create a list with one or more dummy papers.
+    # We use a real paper ID format so that the filename generation is realistic.
+    filtered_arxiv_papers = [
+        DummyPaper(
+            entry_id='https://arxiv.org/abs/2412.03572v2',
+            title="A Test Paper about MLLM and Tools from Berkeley ",
+            summary="This is a mock summary. The full text would mention Berkeley.",
+            authors=["Amir Bar", "Gaoyue Zhou"]
+        ),
+        DummyPaper(
+            entry_id='https://arxiv.org/abs/2411.08253v2',
+            title="Another Test Paper from MIT",
+            summary="A mock summary from someone at MIT",
+            authors=["Nishanth Kumar", "William Shen"]
+        )
+    ]
+
+    print(f"Mock data created with {len(filtered_arxiv_papers)} paper(s).")
+    # --- End of MOCKED Step 1 ---
 
     # --- Step2: Download Filtered Paper PDFs ---
     downloaded_count = 0
@@ -91,11 +203,8 @@ if __name__ == "__main__":
     llm_processed_count = 0
     llm_matches_found = 0
     if final_papers_with_reason:
-        print(f"\n--- Step 4: Processing {len(final_papers_with_reason)} selected papers with LLM ---")
+        print(f"\n--- Steo 4: Processing {len(final_papers_with_reason)} selected papers with LLM ---")
         print(f"Reading files from directory'{config.FINAL_FILTERED_DIR}'")
-
-        # Create an instance of our new summarizer. This will also initialize the LLM client.
-        summarizer = LLMSummarizer(config)
 
         for i, (paper, reason) in enumerate(final_papers_with_reason):
             try:
@@ -116,16 +225,23 @@ if __name__ == "__main__":
                     print("Could not extract text, skipping LLM processing.") 
                     continue
 
-                is_match, summary = summarizer.process_text(extracted_text)
+                llm_model_name_for_call = f"models/{config.MODEL_NAME}"
+                print(f"Call LLM (Model: {llm_model_name_for_call})...") 
+                is_match, summary = process_paper_with_gemini( 
+                    llm_client,
+                    llm_model_name_for_call,
+                    extracted_text,
+                    config.TARGET_INSTITUTIONS
+                )
 
                 if is_match:
                     llm_matches_found += 1
                     print(f"  -> LLM confirmed match")
                     if summary:
                         matched_papers_summaries.append((paper, reason, summary))
-                        print(f"  -> Summary collected.") 
+                        print(f"Summary collected.") 
                     else:
-                        print(f"  -> [Warning] Match confirmed, but no valid summary obtained.")
+                        print(f"[Warning] Match confirmed, but no valid summary obtained.")
                         matched_papers_summaries.append((paper, reason, "[LLM Summary generation failed or was empty]"))
                 else:
                     print(f"  -> LLM did not confirm match")
