@@ -1,5 +1,3 @@
-# arxiv_client.py
-
 import arxiv
 
 class ArxivClient:

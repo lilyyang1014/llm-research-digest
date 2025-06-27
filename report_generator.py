@@ -1,5 +1,3 @@
-# report_generator.py
-
 import os
 
 class ReportGenerator:

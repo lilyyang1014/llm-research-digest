@@ -1,5 +1,4 @@
-# workflow.py
-
+import time
 import os
 from config import Config
 from arxiv_client import ArxivClient
@@ -82,7 +81,8 @@ class WorkflowOrchestrator:
                         continue
                     
                     is_match, summary = self.summarizer.process_text(extracted_text)
-
+                        
+                        
                     if is_match:
                         print(f"  -> LLM confirmed match")
                         if summary:
@@ -93,6 +93,11 @@ class WorkflowOrchestrator:
                             matched_papers_summaries.append((paper, reason, "[LLM Summary generation failed or was empty]"))
                     else:
                         print(f"  -> LLM did not confirm match")
+
+                    if i < len(final_papers_with_reason) - 1:
+                        delay = self.config.API_CALL_DELAY_SECONDS
+                        print(f"Pausing for {delay} seconds...")
+                        time.sleep(delay)
 
                 except Exception as loop_error:
                      paper_id_str = f"ID: {paper.entry_id}" if paper else "Unknown Paper"

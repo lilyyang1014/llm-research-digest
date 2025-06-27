@@ -1,5 +1,3 @@
-# pdf_downloader.py
-
 import os
 import time
 
