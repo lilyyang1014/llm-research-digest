@@ -13,44 +13,18 @@ Too many papers, too little time? I'm your automated assistant, diving into arXi
 🌟 Future Plan  
 I am still a little baby but I'm growing and will become much more powerful. User experience enhancements are coming, such as options to select specific labs and configure the update frequency (daily, weekly, monthly). Please stay tuned!
 
-
-🛠️ Configuration & Usage:
-
-```python
-# LLM-related keywords for initial filtering  
-KEYWORDS = ['llm', 'large language model', 'language model',
-            'foundation model', 'pretrained language model',
-            'transformer', 'generative ai'
-            ]  
-
-# Target date range for paper search (YYYYMMDDHHMMSS format)  
-TARGET_DATE_START = "20250411000000"  
-TARGET_DATE_END = "20250411235959"  
-
-# Target institutions for affiliation matching
-TARGET_INSTITUTIONS = [ "Stanford", "Stanford University",
-                        "Princeton University", "UC Berkeley",
-                        "University of California, Berkeley",
-                        "Berkeley", "CMU", "Carnegie Mellon University",
-                        "Carnegie Mellon", "NVIDIA Research", "NVIDIA",
-                        "Google Deepmind", "Deepmind", "Google", "OpenAI",
-                        "University of Washington", "Cornell University",
-                        "University of Illinois Urbana-Champaign", "UIUC",
-                        "Allen Institute for AI", "AI2"
-                        ]
-```
-
-📦 Requirements
+📦 **Requirements**
 
 ✅Python 3.7+  
 ✅Required libraries: arxiv PyMuPDF (fitz) google-generativeai re os time shutil sys
 
 
-🚀 Installation
+🚀 **Installation**
 
 Clone this repository: 
 ```bash
 git clone https://github.com/lilyyang1014/llm-research-digest.git
+cd llm-research-digest
 ```
 
 Install dependencies: 
@@ -58,24 +32,63 @@ Install dependencies:
 pip install arxiv pymupdf google-generativeai
 ```
 
-Set up your Google API key:
 
+🛠️ **Configuration & Usage**
+
+#### 1. Configure Your Settings in `config.py`
+
+All major settings are now located in the `config.py` file. You can easily modify:
+*   **`KEYWORDS`**: The list of keywords to search for on arXiv.
+*   **`TARGET_INSTITUTIONS`**: The list of top-tier labs to filter by.
+*   **`API_CALL_DELAY_SECONDS`:** The pause duration between API calls.
+*   ... and other settings!
+
+The script is now set to **automatically fetch data for the previous day**
+
+#### 2. Set Up Your Environment
+
+**A. Set Your Google API Key (Required)**
+
+For security, the application reads your API key from an environment variable. Open your terminal and run:
+
+**On macOS / Linux:**
 ```bash
-GOOGLE_API_KEY=<your_api_key_here>
+export GOOGLE_API_KEY="YOUR_REAL_API_KEY_HERE"
+```
+**On Windows(PowerShell):**
+```bash
+$env:GOOGLE_API_KEY="YOUR_REAL_API_KEY_HERE"
+```
+‼️ **Important:** Please keep your API key private. Do not commit it to your code or share it publicly.
+
+**B. Set Your Output Directory (Optional)**
+
+The script generates all output files (PDFs, reports) in a specific directory named by the date (MMDDYYYY format). You can configure this in the main LLMDigest.py file:
+```python
+# In LLMDigest.py
+# Set to your desired absolute path for the base output folder.
+# All date-stamped subfolders will be created inside this path.
+# Set to None to use the current working directory as the base.
+PROJECT_ROOT = '/path/to/your/output/folder'
 ```
 
-Configure your project path:
-
+**3. Run the Application**
+Once everything is configured, simply execute the main script:
 ```bash
-FIXED_PROJECT_PATH=<your_project_path>
+python3 LLMDigest.py
 ```
 
 
-📝 Output The script creates a folder structure with:
+📝 **Output**
 
-A base directory named by the date (MMDDYYYY format)  
-All initially filtered papers in the base directory A "Final_Selected_Papers" subdirectory containing only institution-matched papers  
-A consolidated markdown report with paper details and AI-generated summaries  
+
+The script creates a new folder inside your configured base directory, named by the date (e.g., MMDDYYYY). This folder contains:
+
+- All initially downloaded paper PDFs.
+
+- A Final_Selected_Papers subdirectory with institution-matched papers.
+
+- The final consolidated Markdown report with AI-generated summaries.  
 
 
 🔒 Privacy & Ethics This tool is designed for research purposes only. 
