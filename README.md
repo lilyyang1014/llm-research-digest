@@ -14,7 +14,7 @@ Too many papers, too little time? I'm your automated assistant, diving into arXi
 I am still a little baby but I'm growing and will become much more powerful. User experience enhancements are coming, such as options to select specific labs and configure the update frequency (daily, weekly, monthly). Please stay tuned!
 
 
-🛠️ Configuration The script uses several configuration variables that can be modified:
+🛠️ Configuration & Usage:
 
 ```python
 # LLM-related keywords for initial filtering  
