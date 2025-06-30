@@ -53,7 +53,7 @@ class Config:
     if not GOOGLE_API_KEY:
         print("[WARNING] GOOGLE_API_KEY environment variable is not set. LLM features will fail.")
     
-    MODEL_NAME = "gemini-1.5-flash-latest" # Updated to a more recent model
+    MODEL_NAME = "gemini-1.5-flash" # Updated to a more recent model
     API_CALL_DELAY_SECONDS = 5 # Delay between consecutive API calls to avoid rate limiting
 
     # --- Path Configuration (Simplified for Service) ---

@@ -1,67 +1,69 @@
-# pdf_downloader.py (新修复版 - 坚持使用API)
+# pdf_downloader.py (最终官方API+智能延迟版)
 
 import os
 import time
+import random  # 导入 random 库
 from typing import Tuple, Optional
-import arxiv # 确保导入了 arxiv 库
+import arxiv  # 严格使用官方库
 
 class PdfDownloader:
     """
-    Handles the downloading of a single PDF file for an arXiv paper
-    using the official arxiv library API to avoid anti-bot measures.
+    使用官方 arxiv.download_pdf() 方法，但加入了智能的随机延迟，
+    以尊重服务器的速率限制，从而最大化下载成功率。
     """
     def __init__(self, config):
-        """
-        Initializes the PdfDownloader with a configuration object.
-        """
         self.config = config
         self.min_pdf_size_kb = self.config.MIN_PDF_SIZE_KB
 
     def download_single_paper(self, paper: 'arxiv.Result', download_dir: str) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Downloads a single PDF using the paper's dedicated download_pdf() method,
-        ensuring the ID is clean (version-free) before generating the filename.
-
-        Args:
-            paper (arxiv.Result): The paper object from the arxiv library.
-            download_dir (str): The directory where the PDF should be saved.
-
-        Returns:
-            A tuple containing (filepath, filename). Both are None if download fails.
-        """
         try:
-            # --- 核心修复点 ---
-            # 1. 获取带有版本号的完整ID，用于错误日志
             full_id_with_version = paper.get_short_id()
-            
-            # 2. 清理ID，移除版本号。这是最关键的一步。
-            # '2506.10323v2' -> '2506.10323'
             clean_id_no_version = full_id_with_version.split('v')[0]
-            
-            # 3. 根据清理后的ID构建我们期望的文件名。
-            # 这既是我们要传递给API的文件名，也是我们之后要用来查找文件的依据。
             filename = f"{clean_id_no_version.replace('/', '_')}.pdf"
             filepath = os.path.join(download_dir, filename)
+        except Exception as e:
+            print(f"  -> [Error] Could not process paper metadata for download: {e}")
+            return None, None
 
-            # 礼貌性地暂停一下
-            time.sleep(1.5)
+        if os.path.exists(filepath):
+            try:
+                if os.path.getsize(filepath) >= self.min_pdf_size_kb * 1024:
+                    print(f"  -> File '{filename}' already exists and is valid. Skipping download.")
+                    return filepath, filename
+            except OSError:
+                pass
 
-            # --- 4. 调用官方API进行下载 ---
-            # 我们明确地把清理过的、我们期望的 `filename` 传递给它。
-            # 这能避免API内部可能存在的对带版本号ID的错误处理。
+        # --- 核心解决方案：引入更长且随机的延迟 ---
+        # 生成一个 5 到 12 秒之间的随机延迟，模拟人类的思考和点击间隔
+        delay = random.uniform(5, 12)
+        print(f"  -> Pausing for {delay:.1f} seconds to respect API rate limits...")
+        time.sleep(delay)
+        # --- 结束修改 ---
+
+        print(f"  -> Downloading '{filename}' using official API...")
+        try:
+            # 依然严格使用你指定的官方方法
             paper.download_pdf(dirpath=download_dir, filename=filename)
 
-            # 5. 验证下载的文件
-            if os.path.exists(filepath) and os.path.getsize(filepath) >= self.min_pdf_size_kb * 1024:
-                print(f"  -> Successfully downloaded: {filename}")
+            # 下载后验证逻辑... (保持不变)
+            if not os.path.exists(filepath):
+                print(f"  -> [Error] Download call completed, but file '{filename}' was not created.")
+                return None, None
+            
+            file_size_kb = os.path.getsize(filepath) / 1024
+            if file_size_kb >= self.min_pdf_size_kb:
+                print(f"  -> Success. Downloaded '{filename}' ({file_size_kb:.1f} KB).")
                 return filepath, filename
             else:
-                print(f"  -> [Warning] Download failed or file size is too small for {filename}.")
-                if os.path.exists(filepath):
-                    os.remove(filepath) # 清理无效文件
+                print(f"  -> [Error] Downloaded file '{filename}' is too small ({file_size_kb:.1f} KB). Deleting invalid file.")
+                os.remove(filepath)
                 return None, None
-                
+
         except Exception as e:
-            # 专门处理下载错误，提供更详细的上下文
-            print(f"  -> [Error] An error occurred during download for paper ID '{full_id_with_version}': {e}")
+            print(f"  -> [Error] An error occurred during official API download for '{filename}': {e}")
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except OSError:
+                    pass
             return None, None
