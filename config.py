@@ -1,8 +1,9 @@
 import os
-from datetime import datetime, timedelta, timezone # <--- 1. 添加导入
+from datetime import datetime, timedelta, timezone 
 
 class Config:
     def __init__(self, fixed_project_path: str = None):
+        print(f"DEBUG: Current system UTC time: {datetime.now(timezone.utc)}")
         # --- Search Keywords ---
         self.KEYWORDS = ['llm', 'large language model', 'language model', 'foundation model','pretrained language model',
                          'transformer', 'generative ai']
@@ -10,7 +11,7 @@ class Config:
 
         # --- Date Configuration (DYNAMIC) ---
         # Get yesterday's date in UTC, as arXiv uses UTC time.
-        yesterday_utc = datetime.now(timezone.utc) - timedelta(days=1)
+        yesterday_utc = datetime.now(timezone.utc) - timedelta(days=3)
         date_str_for_query = yesterday_utc.strftime('%Y%m%d')
 
         self.TARGET_DATE_START = f"{date_str_for_query}000000"
@@ -56,4 +57,4 @@ class Config:
         self.FINAL_SUBDIR_NAME = 'Final_Selected_Papers'
         self.FINAL_FILTERED_DIR = os.path.join(self.BASE_DOWNLOAD_DIR, self.FINAL_SUBDIR_NAME)
         self.CONSOLIDATED_MD_FILENAME = "consolidated_papers_summary3.md"
-        self.MARKDOWN_OUTPUT_PATH = os.path.join(self.FINAL_FILTERED_DIR, self.CONSOLIDATED_MD_FILENAME) # I added this line back from an earlier version, it's good practice.
+        self.MARKDOWN_OUTPUT_PATH = os.path.join(self.FINAL_FILTERED_DIR, self.CONSOLIDATED_MD_FILENAME)
