@@ -56,4 +56,4 @@ class Config:
         self.FINAL_SUBDIR_NAME = 'Final_Selected_Papers'
         self.FINAL_FILTERED_DIR = os.path.join(self.BASE_DOWNLOAD_DIR, self.FINAL_SUBDIR_NAME)
         self.CONSOLIDATED_MD_FILENAME = "consolidated_papers_summary3.md"
-        self.MARKDOWN_OUTPUT_PATH = os.path.join(self.FINAL_FILTERED_DIR, self.CONSOLIDATED_MD_FILENAME) # I added this line back from an earlier version, it's good practice.
+        self.MARKDOWN_OUTPUT_PATH = os.path.join(self.FINAL_FILTERED_DIR, self.CONSOLIDATED_MD_FILENAME)
