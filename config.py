@@ -1,8 +1,9 @@
 import os
-from datetime import datetime, timedelta, timezone # <--- 1. 添加导入
+from datetime import datetime, timedelta, timezone 
 
 class Config:
     def __init__(self, fixed_project_path: str = None):
+        print(f"DEBUG: Current system UTC time: {datetime.now(timezone.utc)}")
         # --- Search Keywords ---
         self.KEYWORDS = ['llm', 'large language model', 'language model', 'foundation model','pretrained language model',
                          'transformer', 'generative ai']

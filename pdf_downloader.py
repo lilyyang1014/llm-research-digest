@@ -1,5 +1,8 @@
 import os
 import time
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class PdfDownloader:
     """
@@ -70,7 +73,7 @@ class PdfDownloader:
 
                 if not download_successful:
                     try:
-                        paper.download_pdf(dirpath=self.download_dir, filename=filename)
+                        paper.download_pdf(dirpath=self.download_dir, filename=filename, download_domain='arxiv.org')
                         if os.path.exists(filepath):
                             file_size = os.path.getsize(filepath)
                             if file_size >= self.min_pdf_size_kb * 1024:
