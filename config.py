@@ -10,7 +10,7 @@ class Config:
 
         # --- Date Configuration (DYNAMIC) ---
         # Get yesterday's date in UTC, as arXiv uses UTC time.
-        yesterday_utc = datetime.now(timezone.utc) - timedelta(days=1)
+        yesterday_utc = datetime.now(timezone.utc) - timedelta(days=3)
         date_str_for_query = yesterday_utc.strftime('%Y%m%d')
 
         self.TARGET_DATE_START = f"{date_str_for_query}000000"
