@@ -1,10 +1,8 @@
-# pdf_downloader.py (最终官方API+智能延迟版)
-
 import os
 import time
-import random  # 导入 random 库
+import random  
 from typing import Tuple, Optional
-import arxiv  # 严格使用官方库
+import arxiv  
 
 class PdfDownloader:
     """
