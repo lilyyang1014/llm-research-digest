@@ -1,5 +1,3 @@
-# arxiv_client.py (改造后)
-
 import arxiv
 from typing import List, Optional
 

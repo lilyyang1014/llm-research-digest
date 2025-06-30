@@ -35,7 +35,7 @@ class PdfDownloader:
 
         # --- 核心解决方案：引入更长且随机的延迟 ---
         # 生成一个 5 到 12 秒之间的随机延迟，模拟人类的思考和点击间隔
-        delay = random.uniform(5, 12)
+        delay = random.uniform(4, 7)
         print(f"  -> Pausing for {delay:.1f} seconds to respect API rate limits...")
         time.sleep(delay)
         # --- 结束修改 ---
@@ -43,7 +43,7 @@ class PdfDownloader:
         print(f"  -> Downloading '{filename}' using official API...")
         try:
             # 依然严格使用你指定的官方方法
-            paper.download_pdf(dirpath=download_dir, filename=filename)
+            paper.download_pdf(dirpath=download_dir, filename=filename, download_domain='arxiv.org')
 
             # 下载后验证逻辑... (保持不变)
             if not os.path.exists(filepath):
